@@ -24,17 +24,28 @@ Tarefas:
 Responda ONLY em JSON com {"brand":"...", "short_description":"..."}.
   `.trim();
 
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: { "authorization": `Bearer ${OPENAI_API_KEY}`, "content-type": "application/json" },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.2
-    })
-  });
-  if (!res.ok) return { short_description: "", brand: input.brand || "" };
-  const data = await res.json();
-  const txt = data?.choices?.[0]?.message?.content ?? "{}";
-  try { return JSON.parse(txt); } catch { return { short_description: "", brand: input.brand || "" }; }
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${OPENAI_API_KEY}`,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.2
+      })
+    });
+    if (!res.ok) return { short_description: "", brand: input.brand || "" };
+    const data = await res.json();
+    const txt = data?.choices?.[0]?.message?.content ?? "{}";
+    try {
+      return JSON.parse(txt);
+    } catch {
+      return { short_description: "", brand: input.brand || "" };
+    }
+  } catch {
+    return { short_description: "", brand: input.brand || "" };
+  }
 }
