@@ -120,5 +120,9 @@ app.get("/autofill", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, "0.0.0.0", () => console.log(`[autofill] up on :${PORT}`));
+
+
+const PORT = parseInt(process.env.PORT ?? "8080", 10); // <-- garante number
+const HOST = "0.0.0.0" as const;
+
+app.listen(PORT, HOST, () => console.log(`[autofill] up on :${PORT}`));
