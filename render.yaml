@@ -1,12 +1,10 @@
 services:
   - type: web
-    name: ai-autofill-backend
+    name: busca-produtos-bling
     env: node
     plan: free
-    buildCommand: npm ci && npm run build
+    buildCommand: npm install --no-audit --no-fund && npm run build
     startCommand: npm run start
     envVars:
       - key: NODE_VERSION
         value: 20
-      - key: PORT
-        value: 10000
