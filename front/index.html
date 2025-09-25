@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <title>AI Autofill — Cadastro de Produto</title>
+</head>
+<body class="bg-slate-50">
+  <div class="max-w-4xl mx-auto p-6">
+    <h1 class="text-2xl font-bold mb-4">AI Autofill — Cadastro de Produto</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <label class="block">
+        <span class="text-sm">Nome do produto</span>
+        <input id="name" class="mt-1 w-full rounded-xl border p-2" placeholder="Ex.: Caminhão Truck Obras..." />
+      </label>
+
+      <label class="block">
+        <span class="text-sm">EAN13</span>
+        <input id="ean" class="mt-1 w-full rounded-xl border p-2" placeholder="Ex.: 7891234567890" />
+      </label>
+
+      <label class="block">
+        <span class="text-sm">Marca</span>
+        <input id="brand" class="mt-1 w-full rounded-xl border p-2" />
+      </label>
+
+      <label class="block">
+        <span class="text-sm">Peso (kg)</span>
+        <input id="weight" class="mt-1 w-full rounded-xl border p-2" />
+      </label>
+
+      <label class="block">
+        <span class="text-sm">Largura (cm)</span>
+        <input id="width" class="mt-1 w-full rounded-xl border p-2" />
+      </label>
+
+      <label class="block">
+        <span class="text-sm">Altura (cm)</span>
+        <input id="height" class="mt-1 w-full rounded-xl border p-2" />
+      </label>
+
+      <label class="block">
+        <span class="text-sm">Comprimento (cm)</span>
+        <input id="length" class="mt-1 w-full rounded-xl border p-2" />
+      </label>
+
+      <label class="block md:col-span-2">
+        <span class="text-sm">Descrição curta (marketplaces)</span>
+        <textarea id="shortdesc" rows="3" class="mt-1 w-full rounded-xl border p-2"></textarea>
+      </label>
+
+      <label class="block md:col-span-2">
+        <span class="text-sm">Imagem do produto (URL)</span>
+        <input id="image" class="mt-1 w-full rounded-xl border p-2" />
+      </label>
+    </div>
+
+    <div class="flex flex-wrap gap-3 mt-4">
+      <button id="autofill" class="px-4 py-2 rounded-xl bg-blue-600 text-white">Auto-preencher</button>
+      <button id="copyall" class="px-4 py-2 rounded-xl bg-slate-200">Copiar tudo</button>
+      <button id="copybling" class="px-4 py-2 rounded-xl bg-emerald-600 text-white">Gerar JSON do Bling (PATCH)</button>
+      <span id="confidence" class="ml-2 text-sm text-slate-600"></span>
+    </div>
+
+    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <img id="preview" class="w-full rounded-xl border" alt="preview" />
+      </div>
+      <div>
+        <h3 class="font-semibold mb-2">Fontes</h3>
+        <ul id="sources" class="list-disc pl-5 text-sm"></ul>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="block">
+        <span class="text-sm font-medium">JSON (Bling PATCH) — pronto para copiar</span>
+        <textarea id="blingjson" rows="8" class="mt-1 w-full rounded-xl border p-2 font-mono text-sm"></textarea>
+      </label>
+    </div>
+  </div>
+
+  <script>
+    // Ajuste aqui:
+    const BACKEND = "https://busca-produtos-bling.onrender.com/autofill";
+    const API_KEY = ""; // se configurar API_KEY no backend, preencha aqui e enviaremos via header
+
+    const $ = id => document.getElementById(id);
+    const fields = {
+      name: $("name"), ean: $("ean"), brand: $("brand"), weight: $("weight"),
+      width: $("width"), height: $("height"), length: $("length"),
+      shortdesc: $("shortdesc"), image: $("image")
+    };
+
+    function buildBlingJson() {
+      // Estrutura simples para PATCH no Bling (ajuste aos campos que você usa no seu Updater)
+      const produto = {
+        descricao: fields.name.value.trim(),
+        gtin: fields.ean.value.trim(),
+        marca: fields.brand.value.trim(),
+        pesoLiquido: fields.weight.value ? Number(String(fields.weight.value).replace(",", ".")) : null,
+        largura: fields.width.value ? Number(String(fields.width.value).replace(",", ".")) : null,
+        altura: fields.height.value ? Number(String(fields.height.value).replace(",", ".")) : null,
+        profundidade: fields.length.value ? Number(String(fields.length.value).replace(",", ".")) : null,
+        descricaoCurta: fields.shortdesc.value.trim(),
+        imagemURL: fields.image.value.trim()
+      };
+      // Remove nulls
+      Object.keys(produto).forEach(k => produto[k] === null && delete produto[k]);
+      return JSON.stringify({ produto }, null, 2);
+    }
+
+    async function autofill() {
+      const params = new URLSearchParams({
+        ean: fields.ean.value.trim(),
+        name: fields.name.value.trim()
+      });
+
+      const headers = {};
+      if (API_KEY) headers["x-api-key"] = API_KEY;
+
+      const res = await fetch(`${BACKEND}?${params.toString()}`, { headers });
+      if (!res.ok) {
+        const t = await res.text().catch(()=>"");
+        alert("Erro ao consultar o Autofill: " + (t || res.status));
+        return;
+      }
+      const data = await res.json();
+
+      fields.name.value = data.name || fields.name.value;
+      fields.brand.value = data.brand || "";
+      fields.weight.value = data.weight_kg ?? "";
+      fields.width.value = data.width_cm ?? "";
+      fields.height.value = data.height_cm ?? "";
+      fields.length.value = data.length_cm ?? "";
+      fields.shortdesc.value = data.short_description || "";
+      fields.image.value = data.image_url || "";
+
+      $("preview").src = data.image_url || "";
+      $("confidence").textContent = data.confidence ? `Confiança: ${(data.confidence*100).toFixed(0)}%` : "";
+
+      const ul = $("sources");
+      ul.innerHTML = "";
+      (data.sources || []).forEach(s => {
+        const li = document.createElement("li");
+        const a = document.createElement("a");
+        a.href = s; a.target = "_blank"; a.textContent = s;
+        li.appendChild(a); ul.appendChild(li);
+      });
+
+      $("blingjson").value = buildBlingJson();
+    }
+
+    function copyAll() {
+      const payload = [
+        `Nome: ${fields.name.value}`,
+        `EAN13: ${fields.ean.value}`,
+        `Marca: ${fields.brand.value}`,
+        `Peso (kg): ${fields.weight.value}`,
+        `Largura (cm): ${fields.width.value}`,
+        `Altura (cm): ${fields.height.value}`,
+        `Comprimento (cm): ${fields.length.value}`,
+        `Descrição curta: ${fields.shortdesc.value}`,
+        `Imagem URL: ${fields.image.value}`
+      ].join("\n");
+      navigator.clipboard.writeText(payload);
+      alert("Campos copiados!");
+    }
+
+    function copyBling() {
+      const txt = buildBlingJson();
+      $("blingjson").value = txt;
+      navigator.clipboard.writeText(txt);
+      alert("JSON do Bling copiado!");
+    }
+
+    $("autofill").addEventListener("click", autofill);
+    $("copyall").addEventListener("click", copyAll);
+    $("copybling").addEventListener("click", copyBling);
+  </script>
+</body>
+</html>
